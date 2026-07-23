@@ -52,6 +52,15 @@ async def custom_site():
         while not platform.window.MM.UME:
             await asyncio.sleep(.1)
 
+    # resume audio context for mobile browsers
+    try:
+        sdl2 = platform.window.SDL2
+        if sdl2 and sdl2.audioContext:
+            if sdl2.audioContext.state == "suspended":
+                sdl2.audioContext.resume()
+    except Exception:
+        pass
+
     await TopLevel_async_handler.start_toplevel(platform.shell, console=window.python.config.debug)
     __import__(__name__).__file__ = main
 
