@@ -105,6 +105,7 @@ def all_stopped():
 
 
 won = False
+click_count = 0
 running = True
 
 while running:
@@ -120,11 +121,13 @@ while running:
                     cell.display_sprite = cell.current_sprite
                     cell.target_sprite = cell.current_sprite
                 won = False
+                click_count = 0
             else:
                 mx, my = event.pos
                 for cell in cells:
                     if cell.rect.collidepoint(mx, my) and not cell.spinning:
                         cell.start_spin()
+                        click_count += 1
                         break
 
     for cell in cells:
@@ -149,6 +152,8 @@ while running:
     else:
         title = font.render("Michis!", True, (220, 220, 220))
         screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 15))
+        clicks_text = font.render(f"Clicks: {click_count}", True, (200, 200, 220))
+        screen.blit(clicks_text, (SCREEN_WIDTH // 2 - clicks_text.get_width() // 2, SCREEN_HEIGHT - 60))
         if all_stopped():
             hint = font.render("Click a cell to spin!", True, (150, 150, 180))
             screen.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 30))
