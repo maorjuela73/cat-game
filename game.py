@@ -22,6 +22,7 @@ BOARD_HEIGHT = ROWS * CELL_SIZE + (ROWS - 1) * PADDING
 SCREEN_WIDTH = BOARD_WIDTH + 80
 SCREEN_HEIGHT = 660
 FPS = 60
+STATS_FILE = "assets/stats.json"
 
 BG_COLOR = (40, 40, 60)
 CELL_BG = (70, 70, 100)
@@ -29,6 +30,21 @@ WIN_COLOR = (255, 215, 0)
 STATS_BG = (35, 35, 55)
 BTN_COLOR = (60, 60, 90)
 BTN_HOVER = (80, 80, 110)
+PANEL_BG = (40, 40, 62)
+LEGEND_BG = (45, 45, 65)
+BAR_TRACK = (50, 50, 70)
+HIST_NORMAL = (100, 180, 255)
+HIST_MAX = (255, 200, 100)
+
+TEXT_BRIGHT = (220, 220, 220)
+TEXT_NORMAL = (200, 200, 220)
+TEXT_MUTED = (180, 180, 200)
+TEXT_DIM = (150, 150, 175)
+TEXT_FAINT = (100, 100, 130)
+
+ACCENT_BLUE = (100, 180, 255)
+ACCENT_ORANGE = (255, 180, 100)
+ACCENT_GREEN = (120, 200, 160)
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Michi Slot!")
@@ -52,7 +68,28 @@ for i in range(NUM_SPRITES):
 board_x = (SCREEN_WIDTH - BOARD_WIDTH) // 2
 board_y = (SCREEN_HEIGHT - BOARD_HEIGHT) // 2
 
-STATS_FILE = "assets/stats.json"
+BTN_RECT = pygame.Rect(SCREEN_WIDTH - 115, 10, 105, 34)
+
+STAT_COL_LEFT = 30
+STAT_COL_RIGHT = SCREEN_WIDTH // 2 + 15
+
+
+def draw_button(rect, label, mouse_pos):
+    color = BTN_HOVER if rect.collidepoint(mouse_pos) else BTN_COLOR
+    pygame.draw.rect(screen, color, rect, border_radius=8)
+    text = font.render(label, True, TEXT_NORMAL)
+    screen.blit(text, (rect.centerx - text.get_width() // 2, rect.centery - text.get_height() // 2))
+
+
+def draw_centered(surface, text_surf, y):
+    surface.blit(text_surf, ((SCREEN_WIDTH - text_surf.get_width()) // 2, y))
+
+
+def draw_section_header(title, y, accent_color):
+    text = font.render(title, True, TEXT_NORMAL)
+    x = (SCREEN_WIDTH - text.get_width()) // 2
+    screen.blit(text, (x, y))
+    pygame.draw.rect(screen, accent_color, (x - 10, y + 4, 4, 18), border_radius=2)
 
 
 class StatsManager:
@@ -101,13 +138,8 @@ class StatsManager:
             self.cell_clicks[i] += cell_clicks[i]
         self.sprite_wins[win_sprite] += 1
         self.current_streak += 1
-        if self.current_streak > self.best_streak:
-            self.best_streak = self.current_streak
+        self.best_streak = max(self.best_streak, self.current_streak)
         self.total_play_time += time_sec
-        self.save()
-
-    def reset_streak(self):
-        self.current_streak = 0
         self.save()
 
     def load(self):
@@ -121,7 +153,7 @@ class StatsManager:
             self.clicks_history = d.get('clicks_history', [])
             self.times_history = d.get('times_history', [])
             self.cell_clicks = d.get('cell_clicks', [0] * 9)
-            self.sprite_wins = d.get('sprite_wins', [0] * 4)
+            self.sprite_wins = d.get('sprite_wins', [0] * NUM_SPRITES)
             self.current_streak = d.get('current_streak', 0)
             self.best_streak = d.get('best_streak', 0)
             self.total_play_time = d.get('total_play_time', 0.0)
@@ -176,15 +208,12 @@ class Cell:
         if not self.spinning:
             return
         self.elapsed += dt
-        progress = self.elapsed / self.spin_duration
-        p = min(progress, 1.0)
+        p = min(self.elapsed / self.spin_duration, 1.0)
         interval = 0.125 + p * p * 0.5
-
         self.spin_timer += dt
         if self.spin_timer >= interval:
             self.spin_timer -= interval
             self.display_sprite = (self.display_sprite + 1) % NUM_SPRITES
-
         if self.elapsed >= self.spin_duration:
             self.spinning = False
             self.display_sprite = self.target_sprite
@@ -192,21 +221,14 @@ class Cell:
 
     def draw(self, surface):
         pygame.draw.rect(surface, CELL_BG, self.rect, border_radius=8)
-        sprite_img = sprites[self.display_sprite]
-        sx = self.rect.x + (CELL_SIZE - CELL_SIZE) // 2
-        sy = self.rect.y + (CELL_SIZE - CELL_SIZE) // 2
-        surface.blit(sprite_img, (sx, sy))
+        surface.blit(sprites[self.display_sprite], self.rect.topleft)
 
 
-cells = []
-for r in range(ROWS):
-    for c in range(COLS):
-        cells.append(Cell(r, c))
+cells = [Cell(r, c) for r in range(ROWS) for c in range(COLS)]
 
 
 def all_same():
-    val = cells[0].current_sprite
-    return all(c.current_sprite == val for c in cells)
+    return all(c.current_sprite == cells[0].current_sprite for c in cells)
 
 
 def all_stopped():
@@ -216,18 +238,119 @@ def all_stopped():
 def fmt_time(secs):
     if secs >= 60:
         m = int(secs // 60)
-        s = secs % 60
-        return f"{m}:{s:05.2f}"
+        return f"{m}:{secs % 60:05.2f}"
     return f"{secs:.1f}s"
 
 
-def draw_stats_screen(stats, mouse_pos, current_clicks=0):
+def draw_clicks_histogram(stats, y):
+    history = stats.clicks_history[-10:]
+    if not history:
+        no_data = small_font.render("No games played yet", True, TEXT_FAINT)
+        draw_centered(screen, no_data, y + 30)
+        return
+
+    max_val = max(history)
+    total_w = SCREEN_WIDTH - 60
+    bar_w = max(6, min(20, total_w // len(history) - 3))
+    gap = max(2, min(4, (total_w - bar_w * len(history)) // (len(history) - 1))) if len(history) > 1 else 0
+    total_bar_w = len(history) * bar_w + (len(history) - 1) * gap
+    start_x = (SCREEN_WIDTH - total_bar_w) // 2
+    hist_h = 130
+
+    for i, clicks in enumerate(history):
+        bar_h = int((clicks / max_val) * hist_h) if max_val > 0 else 0
+        x = start_x + i * (bar_w + gap)
+        bar_y = y + hist_h - bar_h
+        color = HIST_NORMAL if clicks < stats.max_clicks else HIST_MAX
+        pygame.draw.rect(screen, color, (x, bar_y, bar_w, bar_h))
+        if bar_h > 18:
+            val = tiny_font.render(str(clicks), True, TEXT_BRIGHT)
+            screen.blit(val, (x + (bar_w - val.get_width()) // 2, bar_y - 15))
+
+    if len(history) > 1:
+        leg_w, leg_h = 58, 34
+        leg_x = SCREEN_WIDTH - 8 - leg_w
+        leg_y = y + hist_h // 2 - leg_h // 2
+        pygame.draw.rect(screen, LEGEND_BG, (leg_x, leg_y, leg_w, leg_h), border_radius=4)
+        sx = leg_x + 6
+        tx = sx + 12
+        sy = leg_y + 4
+        pygame.draw.rect(screen, HIST_NORMAL, (sx, sy + 2, 8, 8), border_radius=2)
+        screen.blit(tiny_font.render("older", True, (130, 130, 150)), (tx, sy))
+        sy += 15
+        pygame.draw.rect(screen, HIST_MAX, (sx, sy + 2, 8, 8), border_radius=2)
+        screen.blit(tiny_font.render("latest", True, (130, 130, 150)), (tx, sy))
+
+
+def draw_heat_map(stats, y):
+    cell_w, cell_h, cell_gap = 32, 28, 4
+    grid_w = 3 * cell_w + 2 * cell_gap
+    start_x = (SCREEN_WIDTH - grid_w) // 2
+    max_clicks = max(stats.cell_clicks) if max(stats.cell_clicks) > 0 else 1
+
+    lbl_y = y - 12
+    for c in range(3):
+        lbl = tiny_font.render(str(c + 1), True, TEXT_FAINT)
+        cx = start_x + c * (cell_w + cell_gap) + (cell_w - lbl.get_width()) // 2
+        screen.blit(lbl, (cx, lbl_y))
+
+    lbl_x = start_x - 16
+    for r in range(3):
+        lbl = tiny_font.render(str(r + 1), True, TEXT_FAINT)
+        ry = y + r * (cell_h + cell_gap) + (cell_h - lbl.get_height()) // 2
+        screen.blit(lbl, (lbl_x, ry))
+
+    for r in range(3):
+        for c in range(3):
+            idx = r * 3 + c
+            clicks = stats.cell_clicks[idx]
+            intensity = clicks / max_clicks
+            color = (
+                int(40 + 180 * intensity),
+                int(40 + 60 * (1 - intensity)),
+                int(40 + 100 * (1 - intensity)),
+            )
+            x = start_x + c * (cell_w + cell_gap)
+            cy = y + r * (cell_h + cell_gap)
+            pygame.draw.rect(screen, color, (x, cy, cell_w, cell_h), border_radius=4)
+            count = tiny_font.render(str(clicks), True, TEXT_BRIGHT)
+            screen.blit(count, (x + (cell_w - count.get_width()) // 2, cy + (cell_h - count.get_height()) // 2))
+
+
+def draw_sprite_dist(stats, y):
+    bar_x = 70
+    bar_w = SCREEN_WIDTH - 140
+    bar_h = 22
+    sprite_gap = 4
+    total_wins = sum(stats.sprite_wins)
+    max_wins = max(stats.sprite_wins) if max(stats.sprite_wins) > 0 else 1
+    colors = [(80 + i * 30, 160 - i * 20, 200 - i * 30) for i in range(NUM_SPRITES)]
+
+    for s in range(NUM_SPRITES):
+        wins = stats.sprite_wins[s]
+        pct = (wins / total_wins * 100) if total_wins > 0 else 0
+        fill_w = int((wins / max_wins) * bar_w)
+        cy = y + s * (bar_h + sprite_gap)
+
+        thumb = tiny_sprites[s]
+        screen.blit(thumb, (bar_x - 28, cy + (bar_h - thumb.get_height()) // 2))
+
+        pygame.draw.rect(screen, BAR_TRACK, (bar_x, cy, bar_w, bar_h), border_radius=4)
+        if fill_w > 0:
+            pygame.draw.rect(screen, colors[s], (bar_x, cy, fill_w, bar_h), border_radius=4)
+
+        rx = bar_x + bar_w + 6
+        pct_text = tiny_font.render(f"{pct:.0f}%", True, TEXT_BRIGHT)
+        screen.blit(pct_text, (rx, cy + (bar_h - pct_text.get_height()) // 2))
+        count = tiny_font.render(f"({wins})", True, (160, 160, 180))
+        screen.blit(count, (rx + pct_text.get_width() + 4, cy + (bar_h - count.get_height()) // 2))
+
+
+def draw_stats_screen(stats, mouse_pos, current_clicks):
     screen.fill(STATS_BG)
+    draw_centered(screen, title_font.render("STATISTICS", True, TEXT_BRIGHT), 10)
 
-    title = title_font.render("STATISTICS", True, (220, 220, 220))
-    screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 10))
-
-    y_off = 8
+    pygame.draw.rect(screen, PANEL_BG, (22, 52, SCREEN_WIDTH - 44, 132), border_radius=8)
 
     left_stats = [
         ("Games Played", str(stats.games_played)),
@@ -237,7 +360,6 @@ def draw_stats_screen(stats, mouse_pos, current_clicks=0):
         ("Max Clicks", str(stats.max_clicks)),
         ("Min Clicks", str(stats.min_clicks)),
     ]
-
     right_stats = [
         ("Avg Time", fmt_time(stats.avg_time)),
         ("Fastest Win", fmt_time(stats.fastest_win)),
@@ -247,181 +369,52 @@ def draw_stats_screen(stats, mouse_pos, current_clicks=0):
         ("Total Play Time", fmt_time(stats.total_play_time)),
     ]
 
-    panel_rect = pygame.Rect(22, 44 + y_off, SCREEN_WIDTH - 44, 6 * 20 + 12)
-    pygame.draw.rect(screen, (40, 40, 62), panel_rect, border_radius=8)
-    pygame.draw.line(screen, (50, 50, 72), (30, 44 + 6 * 20 + 16 + y_off), (SCREEN_WIDTH - 30, 44 + 6 * 20 + 16 + y_off), 1)
-
-    col1_x = 30
-    col2_x = SCREEN_WIDTH // 2 + 15
-    stat_y = 52 + y_off
+    stat_y = 60
     line_h = 20
-
     for i, (label, val) in enumerate(left_stats):
-        color = (255, 215, 0) if label == "Current Clicks" else (180, 180, 200)
-        text = small_font.render(f"{label}:", True, (150, 150, 175))
-        screen.blit(text, (col1_x, stat_y + i * line_h))
-        val_text = small_font.render(val, True, color)
-        screen.blit(val_text, (col1_x + text.get_width() + 8, stat_y + i * line_h))
+        color = WIN_COLOR if label == "Current Clicks" else TEXT_MUTED
+        text = small_font.render(f"{label}:", True, TEXT_DIM)
+        screen.blit(text, (STAT_COL_LEFT, stat_y + i * line_h))
+        screen.blit(small_font.render(val, True, color), (STAT_COL_LEFT + text.get_width() + 8, stat_y + i * line_h))
 
     for i, (label, val) in enumerate(right_stats):
-        text = small_font.render(f"{label}:", True, (150, 150, 175))
-        screen.blit(text, (col2_x, stat_y + i * line_h))
-        val_text = small_font.render(val, True, (180, 180, 200))
-        screen.blit(val_text, (col2_x + text.get_width() + 8, stat_y + i * line_h))
+        text = small_font.render(f"{label}:", True, TEXT_DIM)
+        screen.blit(text, (STAT_COL_RIGHT, stat_y + i * line_h))
+        screen.blit(small_font.render(val, True, TEXT_MUTED), (STAT_COL_RIGHT + text.get_width() + 8, stat_y + i * line_h))
 
-    hist_label = font.render("Recent 10: Clicks per Game", True, (200, 200, 220))
-    hist_label_x = SCREEN_WIDTH // 2 - hist_label.get_width() // 2
-    screen.blit(hist_label, (hist_label_x, 180 + y_off))
-    pygame.draw.rect(screen, (100, 180, 255), (hist_label_x - 10, 184 + y_off, 4, 18), border_radius=2)
-    hist_y = 220 + y_off
-    hist_h = 130
+    draw_section_header("Recent 10: Clicks per Game", 188, ACCENT_BLUE)
+    draw_clicks_histogram(stats, 228)
 
-    history = stats.clicks_history[-10:]
-    if history:
-        max_clicks_hist = max(history)
-        total_w = SCREEN_WIDTH - 60
-        bar_w = max(6, min(20, total_w // len(history) - 3))
-        gap = max(2, min(4, (total_w - bar_w * len(history)) // (len(history) - 1))) if len(history) > 1 else 0
-        total_bar_w = len(history) * bar_w + (len(history) - 1) * gap
-        start_x = (SCREEN_WIDTH - total_bar_w) // 2
+    draw_section_header("Favorite Cell", 372, ACCENT_ORANGE)
+    draw_heat_map(stats, 412)
 
-        for i, clicks in enumerate(history):
-            bar_h = int((clicks / max_clicks_hist) * hist_h) if max_clicks_hist > 0 else 0
-            x = start_x + i * (bar_w + gap)
-            y = hist_y + hist_h - bar_h
-            color = (100, 180, 255) if clicks < stats.max_clicks else (255, 200, 100)
-            pygame.draw.rect(screen, color, (x, y, bar_w, bar_h))
-            if bar_h > 18:
-                val_text = tiny_font.render(str(clicks), True, (255, 255, 255))
-                screen.blit(val_text, (x + (bar_w - val_text.get_width()) // 2, y - 15))
+    draw_section_header("Win Sprite Distribution", 516, ACCENT_GREEN)
+    draw_sprite_dist(stats, 542)
 
-        if len(history) > 1:
-            leg_box_w = 58
-            leg_box_h = 34
-            leg_box_y = hist_y + hist_h // 2 - leg_box_h // 2
-            leg_box_x = SCREEN_WIDTH - 8
-            pygame.draw.rect(screen, (45, 45, 65), (leg_box_x - leg_box_w, leg_box_y, leg_box_w, leg_box_h), border_radius=4)
-            swatch_size = 8
-            label_x = leg_box_x - leg_box_w + 6
-            swatch_x = label_x
-            text_x = label_x + swatch_size + 4
-            row_y = leg_box_y + 4
-            pygame.draw.rect(screen, (100, 180, 255), (swatch_x, row_y + 2, swatch_size, swatch_size), border_radius=2)
-            older_lbl = tiny_font.render("older", True, (130, 130, 150))
-            screen.blit(older_lbl, (text_x, row_y))
-            row_y += 15
-            pygame.draw.rect(screen, (255, 200, 100), (swatch_x, row_y + 2, swatch_size, swatch_size), border_radius=2)
-            latest_lbl = tiny_font.render("latest", True, (130, 130, 150))
-            screen.blit(latest_lbl, (text_x, row_y))
-    else:
-        no_data = small_font.render("No games played yet", True, (100, 100, 130))
-        screen.blit(no_data, (SCREEN_WIDTH // 2 - no_data.get_width() // 2, hist_y + 30))
-
-    heat_label = font.render("Favorite Cell", True, (200, 200, 220))
-    heat_label_x = SCREEN_WIDTH // 2 - heat_label.get_width() // 2
-    screen.blit(heat_label, (heat_label_x, 364 + y_off))
-    pygame.draw.rect(screen, (255, 180, 100), (heat_label_x - 10, 368 + y_off, 4, 18), border_radius=2)
-    pygame.draw.line(screen, (50, 50, 72), (30, 358 + y_off), (SCREEN_WIDTH - 30, 358 + y_off), 1)
-    heat_y = 404 + y_off
-    cell_w, cell_h = 32, 28
-    cell_gap = 4
-    heat_total_w = 3 * cell_w + 2 * cell_gap
-    heat_start_x = (SCREEN_WIDTH - heat_total_w) // 2
-    max_cell = max(stats.cell_clicks) if max(stats.cell_clicks) > 0 else 1
-
-    col_lbl_y = heat_y - 12
-    for c in range(3):
-        lbl = tiny_font.render(str(c + 1), True, (100, 100, 130))
-        cx = heat_start_x + c * (cell_w + cell_gap) + (cell_w - lbl.get_width()) // 2
-        screen.blit(lbl, (cx, col_lbl_y))
-    row_lbl_x = heat_start_x - 16
-    for r in range(3):
-        lbl = tiny_font.render(str(r + 1), True, (100, 100, 130))
-        ry = heat_y + r * (cell_h + cell_gap) + (cell_h - lbl.get_height()) // 2
-        screen.blit(lbl, (row_lbl_x, ry))
-
-    for r in range(3):
-        for c in range(3):
-            idx = r * 3 + c
-            clicks = stats.cell_clicks[idx]
-            intensity = clicks / max_cell
-            color = (
-                int(40 + 180 * intensity),
-                int(40 + 60 * (1 - intensity)),
-                int(40 + 100 * (1 - intensity)),
-            )
-            x = heat_start_x + c * (cell_w + cell_gap)
-            y = heat_y + r * (cell_h + cell_gap)
-            pygame.draw.rect(screen, color, (x, y, cell_w, cell_h), border_radius=4)
-            count_text = tiny_font.render(str(clicks), True, (255, 255, 255))
-            screen.blit(count_text, (x + (cell_w - count_text.get_width()) // 2, y + (cell_h - count_text.get_height()) // 2))
-
-    sprite_label = font.render("Win Sprite Distribution", True, (200, 200, 220))
-    sprite_label_x = SCREEN_WIDTH // 2 - sprite_label.get_width() // 2
-    screen.blit(sprite_label, (sprite_label_x, 508 + y_off))
-    pygame.draw.rect(screen, (120, 200, 160), (sprite_label_x - 10, 512 + y_off, 4, 18), border_radius=2)
-    pygame.draw.line(screen, (50, 50, 72), (30, 504 + y_off), (SCREEN_WIDTH - 30, 504 + y_off), 1)
-    sprite_y = 534 + y_off
-    bar_x = 70
-    bar_w = SCREEN_WIDTH - 140
-    bar_h = 22
-    sprite_gap = 4
-    total_sprite_wins = sum(stats.sprite_wins)
-    max_wins = max(stats.sprite_wins) if max(stats.sprite_wins) > 0 else 1
-
-    for s in range(NUM_SPRITES):
-        wins = stats.sprite_wins[s]
-        pct = (wins / total_sprite_wins * 100) if total_sprite_wins > 0 else 0
-        fill_w = int((wins / max_wins) * bar_w)
-
-        thumb_x = bar_x - 28
-        thumb_y = sprite_y + (bar_h - 24) // 2
-        screen.blit(tiny_sprites[s], (thumb_x, thumb_y))
-
-        pygame.draw.rect(screen, (50, 50, 70), (bar_x, sprite_y, bar_w, bar_h), border_radius=4)
-        if fill_w > 0:
-            bar_color = (80 + s * 30, 160 - s * 20, 200 - s * 30)
-            pygame.draw.rect(screen, bar_color, (bar_x, sprite_y, fill_w, bar_h), border_radius=4)
-
-        right_x = bar_x + bar_w + 6
-        pct_text = tiny_font.render(f"{pct:.0f}%", True, (255, 255, 255))
-        screen.blit(pct_text, (right_x, sprite_y + (bar_h - pct_text.get_height()) // 2))
-
-        count_text = tiny_font.render(f"({wins})", True, (160, 160, 180))
-        screen.blit(count_text, (right_x + pct_text.get_width() + 4, sprite_y + (bar_h - count_text.get_height()) // 2))
-
-        sprite_y += bar_h + sprite_gap
-
-    back_rect = pygame.Rect(SCREEN_WIDTH - 115, 10, 105, 34)
-    btn_color = BTN_HOVER if back_rect.collidepoint(mouse_pos) else BTN_COLOR
-    pygame.draw.rect(screen, btn_color, back_rect, border_radius=8)
-    back_text = font.render("BACK", True, (200, 200, 220))
-    screen.blit(back_text, (back_rect.centerx - back_text.get_width() // 2, back_rect.centery - back_text.get_height() // 2))
-
-    return back_rect
+    draw_button(BTN_RECT, "BACK", mouse_pos)
+    return BTN_RECT
 
 
 if __name__ == '__main__':
     stats = StatsManager()
-    STATS_BTN_RECT = pygame.Rect(SCREEN_WIDTH - 115, 10, 105, 34)
     stats_back_rect = None
-    
+
     game_state = "PLAYING"
     won = False
     click_count = 0
     current_cell_clicks = [0] * 9
     game_start_ticks = 0
-    running = True
-    
-    while running:
+
+    while True:
         dt = clock.tick(FPS) / 1000.0
         mouse_pos = pygame.mouse.get_pos()
-    
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
-    
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if game_state == "STATS":
                     if stats_back_rect and stats_back_rect.collidepoint(event.pos):
                         game_state = "PLAYING"
@@ -435,63 +428,56 @@ if __name__ == '__main__':
                     current_cell_clicks = [0] * 9
                     game_start_ticks = 0
                     pygame.mixer.music.unpause()
-                elif STATS_BTN_RECT.collidepoint(event.pos):
+                elif BTN_RECT.collidepoint(event.pos):
                     game_state = "STATS"
                 else:
-                    mx, my = event.pos
                     for cell in cells:
-                        if cell.rect.collidepoint(mx, my) and not cell.spinning:
+                        if cell.rect.collidepoint(event.pos) and not cell.spinning:
                             cell.start_spin()
                             click_count += 1
-                            idx = cell.row * COLS + cell.col
-                            current_cell_clicks[idx] += 1
+                            current_cell_clicks[cell.row * COLS + cell.col] += 1
                             random.choice(click_sounds).play()
                             if game_start_ticks == 0:
                                 game_start_ticks = pygame.time.get_ticks()
                             break
-    
+
         for cell in cells:
             cell.update(dt)
-    
+
         if game_state == "PLAYING" and not won and all_stopped() and all_same():
             won = True
             win_sound.play()
             pygame.mixer.music.pause()
-            game_duration = (pygame.time.get_ticks() - game_start_ticks) / 1000.0
-            win_sprite = cells[0].current_sprite
-            stats.record_game(click_count, game_duration, current_cell_clicks, win_sprite)
-    
+            stats.record_game(
+                click_count,
+                (pygame.time.get_ticks() - game_start_ticks) / 1000.0,
+                current_cell_clicks,
+                cells[0].current_sprite,
+            )
+
         screen.fill(BG_COLOR)
-    
+
         if game_state == "PLAYING":
             for cell in cells:
                 cell.draw(screen)
-    
-            title = title_font.render("Michi Slot!", True, (220, 220, 220))
-            screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 10))
-    
-            btn_color = BTN_HOVER if STATS_BTN_RECT.collidepoint(mouse_pos) else BTN_COLOR
-            pygame.draw.rect(screen, btn_color, STATS_BTN_RECT, border_radius=8)
-            btn_text = font.render("STATS", True, (200, 200, 220))
-            screen.blit(btn_text, (STATS_BTN_RECT.centerx - btn_text.get_width() // 2, STATS_BTN_RECT.centery - btn_text.get_height() // 2))
-    
+
+            draw_centered(screen, title_font.render("Michi Slot!", True, TEXT_BRIGHT), 10)
+            draw_button(BTN_RECT, "STATS", mouse_pos)
+
             if not won and all_stopped():
-                hint = font.render("Click a cell to spin!", True, (150, 150, 180))
-                screen.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 40))
-    
+                hint = font.render("Click a cell to spin!", True, TEXT_DIM)
+                draw_centered(screen, hint, SCREEN_HEIGHT - 40)
+
             if won:
                 overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
                 overlay.fill((0, 0, 0, 100))
                 screen.blit(overlay, (0, 0))
                 win_text = big_font.render("YOU WIN!", True, WIN_COLOR)
-                screen.blit(win_text, (SCREEN_WIDTH // 2 - win_text.get_width() // 2, SCREEN_HEIGHT // 2 - 50))
-                sub = font.render("Click anywhere to play again", True, (200, 200, 200))
-                screen.blit(sub, (SCREEN_WIDTH // 2 - sub.get_width() // 2, SCREEN_HEIGHT // 2 + 10))
-    
+                draw_centered(screen, win_text, SCREEN_HEIGHT // 2 - 50)
+                sub = font.render("Click anywhere to play again", True, TEXT_NORMAL)
+                draw_centered(screen, sub, SCREEN_HEIGHT // 2 + 10)
+
         elif game_state == "STATS":
             stats_back_rect = draw_stats_screen(stats, mouse_pos, click_count)
-    
+
         pygame.display.flip()
-    
-    pygame.quit()
-    sys.exit()
