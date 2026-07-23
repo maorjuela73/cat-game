@@ -7,8 +7,7 @@ from models import Cell, StatsManager, COLS, ROWS, NUM_SPRITES, all_same, all_st
 from ui import (
     SCREEN_WIDTH, SCREEN_HEIGHT, CELL_SIZE, PADDING, CELL_BG, BG_COLOR,
     WIN_COLOR, TEXT_BRIGHT, TEXT_NORMAL, TEXT_DIM, BTN_RECT,
-    cell_rect, sprites, font, title_font, big_font,
-    draw_button, draw_centered, draw_stats_screen, init as ui_init,
+    cell_rect, draw_button, draw_centered, draw_stats_screen, init as ui_init,
 )
 
 FPS = 60
@@ -17,6 +16,11 @@ FPS = 60
 async def main():
     pygame.init()
     ui_init()
+    import ui
+    sprites = ui.sprites
+    font = ui.font
+    title_font = ui.title_font
+    big_font = ui.big_font
     pygame.mixer.init()
     audio_ok = False
 
