@@ -206,6 +206,17 @@ function show_infobox() {
     }
     function custom_prerun(){}
     function custom_postrun(){}
+
+    document.addEventListener('click', function resumeAudio() {
+        if (window.SDL2 && window.SDL2.audioContext && window.SDL2.audioContext.state === 'suspended') {
+            window.SDL2.audioContext.resume();
+        }
+    }, { once: true });
+    document.addEventListener('touchstart', function resumeAudio() {
+        if (window.SDL2 && window.SDL2.audioContext && window.SDL2.audioContext.state === 'suspended') {
+            window.SDL2.audioContext.resume();
+        }
+    }, { once: true });
     </script>
 </body>
 </html>
