@@ -1,0 +1,25 @@
+{
+  "name": "Michi Slot!",
+  "short_name": "MichiSlot",
+  "description": "A cat slot machine game",
+  "start_url": "/cat-game/",
+  "scope": "/cat-game/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#28283C",
+  "theme_color": "#28283C",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
