@@ -1,4 +1,4 @@
-var CACHE = 'michislot-v1';
+var CACHE = 'michislot-v3';
 
 self.addEventListener('install', function (e) {
   self.skipWaiting();
@@ -19,5 +19,11 @@ self.addEventListener('activate', function (e) {
 });
 
 self.addEventListener('fetch', function (e) {
+  if (e.request.mode === 'navigate') {
+    e.respondWith(fetch(e.request).catch(function () {
+      return caches.match(e.request);
+    }));
+    return;
+  }
   e.respondWith(fetch(e.request));
 });
