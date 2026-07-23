@@ -18,7 +18,7 @@ PADDING = 10
 BOARD_WIDTH = COLS * CELL_SIZE + (COLS - 1) * PADDING
 BOARD_HEIGHT = ROWS * CELL_SIZE + (ROWS - 1) * PADDING
 SCREEN_WIDTH = BOARD_WIDTH + 80
-SCREEN_HEIGHT = BOARD_HEIGHT + 120
+SCREEN_HEIGHT = BOARD_HEIGHT + 150
 FPS = 60
 
 BG_COLOR = (40, 40, 60)
@@ -40,7 +40,7 @@ for i in range(NUM_SPRITES):
     sprites.append(scaled)
 
 board_x = (SCREEN_WIDTH - BOARD_WIDTH) // 2
-board_y = 70
+board_y = 85
 
 
 class Cell:
@@ -91,7 +91,11 @@ class Cell:
     def draw(self, surface):
         pygame.draw.rect(surface, CELL_BG, self.rect, border_radius=8)
         sprite_img = sprites[self.display_sprite]
-        surface.blit(sprite_img, self.rect.topleft)
+        sx = self.rect.x + (CELL_SIZE - CELL_SIZE) // 2
+        sy = self.rect.y + (CELL_SIZE - CELL_SIZE) // 2
+        surface.blit(sprite_img, (sx, sy))
+        if not self.spinning and self.current_sprite == self.target_sprite:
+            pass
 
 
 cells = []
@@ -150,22 +154,24 @@ while running:
     for cell in cells:
         cell.draw(screen)
 
+    title = font.render("Cat Slot!", True, (220, 220, 220))
+    screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 12))
+
+    clicks_text = font.render(f"Clicks: {click_count}", True, (200, 200, 220))
+    screen.blit(clicks_text, (SCREEN_WIDTH // 2 - clicks_text.get_width() // 2, 48))
+
+    if not won and all_stopped():
+        hint = font.render("Click a cell to spin!", True, (150, 150, 180))
+        screen.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 35))
+
     if won:
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 100))
         screen.blit(overlay, (0, 0))
         win_text = big_font.render("YOU WIN!", True, WIN_COLOR)
-        screen.blit(win_text, (SCREEN_WIDTH // 2 - win_text.get_width() // 2, 10))
+        screen.blit(win_text, (SCREEN_WIDTH // 2 - win_text.get_width() // 2, SCREEN_HEIGHT // 2 - 40))
         sub = font.render("Click anywhere to play again", True, (200, 200, 200))
-        screen.blit(sub, (SCREEN_WIDTH // 2 - sub.get_width() // 2, SCREEN_HEIGHT - 30))
-    else:
-        title = font.render("Michis!", True, (220, 220, 220))
-        screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 15))
-        clicks_text = font.render(f"Clicks: {click_count}", True, (200, 200, 220))
-        screen.blit(clicks_text, (SCREEN_WIDTH // 2 - clicks_text.get_width() // 2, SCREEN_HEIGHT - 60))
-        if all_stopped():
-            hint = font.render("Click a cell to spin!", True, (150, 150, 180))
-            screen.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 30))
+        screen.blit(sub, (SCREEN_WIDTH // 2 - sub.get_width() // 2, SCREEN_HEIGHT // 2 + 10))
 
     pygame.display.flip()
 
