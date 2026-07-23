@@ -22,6 +22,16 @@ async def main():
     title_font = ui.title_font
     big_font = ui.big_font
     pygame.mixer.init()
+
+    if sys.platform == "emscripten":
+        import platform
+        try:
+            sdl2 = platform.window.SDL2
+            if sdl2 and sdl2.audioContext and sdl2.audioContext.state == "suspended":
+                sdl2.audioContext.resume()
+        except Exception:
+            pass
+
     audio_ok = False
 
     try:
