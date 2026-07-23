@@ -95,7 +95,7 @@ config = {
     cdn : "{{cookiecutter.cdn}}",
     autorun : {{cookiecutter.autorun}},
     PYBUILD : "{{cookiecutter.PYBUILD}}",
-    fb_ar   :  1.77,
+    fb_ar   :  1.737,
     fb_width : "{{cookiecutter.width}}",
     fb_height : "{{cookiecutter.height}}"
 }
@@ -128,15 +128,17 @@ function show_infobox() {
     <link rel="manifest" href="manifest.webmanifest">
 
     <style>
-        body {
+        html, body {
             margin: 0;
             padding: 0;
             background-color: #28283C;
             overflow: hidden;
+            width: 100%;
+            height: 100%;
         }
         canvas.emscripten {
             border: 0px none;
-            background-color: transparent;
+            background-color: #28283C;
             width: 100%;
             height: 100%;
             z-index: 5;
@@ -157,6 +159,16 @@ function show_infobox() {
             padding: 12px 24px;
             border-radius: 8px;
             z-index: 999999;
+        }
+        #transfer, #status, #progress, #html, #dlg {
+            background: #28283C;
+        }
+        #status {
+            color: #DCDCDC;
+            font-family: sans-serif;
+        }
+        progress {
+            accent-color: #64648A;
         }
     </style>
 
