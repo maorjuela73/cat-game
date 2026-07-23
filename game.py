@@ -34,6 +34,7 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Michi Slot!")
 clock = pygame.time.Clock()
 font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 28)
+title_font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 36)
 big_font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 48)
 small_font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 20)
 tiny_font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 14)
@@ -49,7 +50,7 @@ for i in range(NUM_SPRITES):
     tiny_sprites.append(pygame.transform.scale(frame, (24, 24)))
 
 board_x = (SCREEN_WIDTH - BOARD_WIDTH) // 2
-board_y = 85
+board_y = (SCREEN_HEIGHT - BOARD_HEIGHT) // 2
 
 STATS_FILE = "assets/stats.json"
 
@@ -220,14 +221,15 @@ def fmt_time(secs):
     return f"{secs:.1f}s"
 
 
-def draw_stats_screen(stats, mouse_pos):
+def draw_stats_screen(stats, mouse_pos, current_clicks=0):
     screen.fill(STATS_BG)
 
-    title = big_font.render("STATISTICS", True, (220, 220, 220))
-    screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 12))
+    title = title_font.render("STATISTICS", True, (220, 220, 220))
+    screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 10))
 
     left_stats = [
         ("Games Played", str(stats.games_played)),
+        ("Current Clicks", str(current_clicks)),
         ("Total Clicks", str(stats.total_clicks)),
         ("Avg Clicks", f"{stats.avg_clicks:.1f}"),
         ("Max Clicks", str(stats.max_clicks)),
@@ -347,8 +349,7 @@ def draw_stats_screen(stats, mouse_pos):
 
         sprite_y += bar_h + sprite_gap
 
-    back_y = sprite_y + 20
-    back_rect = pygame.Rect(SCREEN_WIDTH // 2 - 50, back_y, 100, 35)
+    back_rect = pygame.Rect(SCREEN_WIDTH - 115, 10, 105, 34)
     btn_color = BTN_HOVER if back_rect.collidepoint(mouse_pos) else BTN_COLOR
     pygame.draw.rect(screen, btn_color, back_rect, border_radius=8)
     back_text = font.render("BACK", True, (200, 200, 220))
@@ -359,7 +360,7 @@ def draw_stats_screen(stats, mouse_pos):
 
 if __name__ == '__main__':
     stats = StatsManager()
-    STATS_BTN_RECT = pygame.Rect(SCREEN_WIDTH - 95, 10, 85, 28)
+    STATS_BTN_RECT = pygame.Rect(SCREEN_WIDTH - 115, 10, 105, 34)
     stats_back_rect = None
     
     game_state = "PLAYING"
@@ -423,20 +424,17 @@ if __name__ == '__main__':
             for cell in cells:
                 cell.draw(screen)
     
-            title = font.render("Cat Slot!", True, (220, 220, 220))
-            screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 12))
+            title = title_font.render("Michi Slot!", True, (220, 220, 220))
+            screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 10))
     
             btn_color = BTN_HOVER if STATS_BTN_RECT.collidepoint(mouse_pos) else BTN_COLOR
-            pygame.draw.rect(screen, btn_color, STATS_BTN_RECT, border_radius=6)
-            btn_text = small_font.render("STATS", True, (200, 200, 220))
+            pygame.draw.rect(screen, btn_color, STATS_BTN_RECT, border_radius=8)
+            btn_text = font.render("STATS", True, (200, 200, 220))
             screen.blit(btn_text, (STATS_BTN_RECT.centerx - btn_text.get_width() // 2, STATS_BTN_RECT.centery - btn_text.get_height() // 2))
-    
-            clicks_text = font.render(f"Clicks: {click_count}", True, (200, 200, 220))
-            screen.blit(clicks_text, (SCREEN_WIDTH // 2 - clicks_text.get_width() // 2, 48))
     
             if not won and all_stopped():
                 hint = font.render("Click a cell to spin!", True, (150, 150, 180))
-                screen.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 35))
+                screen.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 40))
     
             if won:
                 overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -448,7 +446,7 @@ if __name__ == '__main__':
                 screen.blit(sub, (SCREEN_WIDTH // 2 - sub.get_width() // 2, SCREEN_HEIGHT // 2 + 10))
     
         elif game_state == "STATS":
-            stats_back_rect = draw_stats_screen(stats, mouse_pos)
+            stats_back_rect = draw_stats_screen(stats, mouse_pos, click_count)
     
         pygame.display.flip()
     
