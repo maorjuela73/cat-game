@@ -21,9 +21,7 @@ jobs:
           /tmp/venv/bin/pip install pygbag pygame-ce
 
       - name: Build with pygbag
-        run: |
-          find assets -name '*.mp3' -delete
-          /tmp/venv/bin/pygbag --build --template template.tmpl --width 380 --height 660 --ume_block 0 --disable-sound-format-error main.py
+        run: /tmp/venv/bin/pygbag --build --template template.tmpl --width 380 --height 660 --ume_block 0 --disable-sound-format-error main.py
 
       - name: Copy static assets
         run: cp static/* build/web/
