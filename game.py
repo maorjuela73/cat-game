@@ -227,6 +227,8 @@ def draw_stats_screen(stats, mouse_pos, current_clicks=0):
     title = title_font.render("STATISTICS", True, (220, 220, 220))
     screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 10))
 
+    y_off = 8
+
     left_stats = [
         ("Games Played", str(stats.games_played)),
         ("Current Clicks", str(current_clicks)),
@@ -245,23 +247,33 @@ def draw_stats_screen(stats, mouse_pos, current_clicks=0):
         ("Total Play Time", fmt_time(stats.total_play_time)),
     ]
 
+    panel_rect = pygame.Rect(22, 44 + y_off, SCREEN_WIDTH - 44, 6 * 20 + 12)
+    pygame.draw.rect(screen, (40, 40, 62), panel_rect, border_radius=8)
+    pygame.draw.line(screen, (50, 50, 72), (30, 44 + 6 * 20 + 16 + y_off), (SCREEN_WIDTH - 30, 44 + 6 * 20 + 16 + y_off), 1)
+
     col1_x = 30
     col2_x = SCREEN_WIDTH // 2 + 15
-    stat_y = 52
+    stat_y = 52 + y_off
     line_h = 20
 
     for i, (label, val) in enumerate(left_stats):
         color = (255, 215, 0) if label == "Current Clicks" else (180, 180, 200)
-        text = small_font.render(f"{label}: {val}", True, color)
+        text = small_font.render(f"{label}:", True, (150, 150, 175))
         screen.blit(text, (col1_x, stat_y + i * line_h))
+        val_text = small_font.render(val, True, color)
+        screen.blit(val_text, (col1_x + text.get_width() + 8, stat_y + i * line_h))
 
     for i, (label, val) in enumerate(right_stats):
-        text = small_font.render(f"{label}: {val}", True, (180, 180, 200))
+        text = small_font.render(f"{label}:", True, (150, 150, 175))
         screen.blit(text, (col2_x, stat_y + i * line_h))
+        val_text = small_font.render(val, True, (180, 180, 200))
+        screen.blit(val_text, (col2_x + text.get_width() + 8, stat_y + i * line_h))
 
     hist_label = font.render("Recent 10: Clicks per Game", True, (200, 200, 220))
-    screen.blit(hist_label, (SCREEN_WIDTH // 2 - hist_label.get_width() // 2, 180))
-    hist_y = 220
+    hist_label_x = SCREEN_WIDTH // 2 - hist_label.get_width() // 2
+    screen.blit(hist_label, (hist_label_x, 180 + y_off))
+    pygame.draw.rect(screen, (100, 180, 255), (hist_label_x - 10, 184 + y_off, 4, 18), border_radius=2)
+    hist_y = 220 + y_off
     hist_h = 130
 
     history = stats.clicks_history[-10:]
@@ -306,13 +318,27 @@ def draw_stats_screen(stats, mouse_pos, current_clicks=0):
         screen.blit(no_data, (SCREEN_WIDTH // 2 - no_data.get_width() // 2, hist_y + 30))
 
     heat_label = font.render("Favorite Cell", True, (200, 200, 220))
-    screen.blit(heat_label, (SCREEN_WIDTH // 2 - heat_label.get_width() // 2, 364))
-    heat_y = 388
-    cell_w, cell_h = 40, 36
-    cell_gap = 5
+    heat_label_x = SCREEN_WIDTH // 2 - heat_label.get_width() // 2
+    screen.blit(heat_label, (heat_label_x, 364 + y_off))
+    pygame.draw.rect(screen, (255, 180, 100), (heat_label_x - 10, 368 + y_off, 4, 18), border_radius=2)
+    pygame.draw.line(screen, (50, 50, 72), (30, 358 + y_off), (SCREEN_WIDTH - 30, 358 + y_off), 1)
+    heat_y = 404 + y_off
+    cell_w, cell_h = 32, 28
+    cell_gap = 4
     heat_total_w = 3 * cell_w + 2 * cell_gap
     heat_start_x = (SCREEN_WIDTH - heat_total_w) // 2
     max_cell = max(stats.cell_clicks) if max(stats.cell_clicks) > 0 else 1
+
+    col_lbl_y = heat_y - 12
+    for c in range(3):
+        lbl = tiny_font.render(str(c + 1), True, (100, 100, 130))
+        cx = heat_start_x + c * (cell_w + cell_gap) + (cell_w - lbl.get_width()) // 2
+        screen.blit(lbl, (cx, col_lbl_y))
+    row_lbl_x = heat_start_x - 16
+    for r in range(3):
+        lbl = tiny_font.render(str(r + 1), True, (100, 100, 130))
+        ry = heat_y + r * (cell_h + cell_gap) + (cell_h - lbl.get_height()) // 2
+        screen.blit(lbl, (row_lbl_x, ry))
 
     for r in range(3):
         for c in range(3):
@@ -331,8 +357,11 @@ def draw_stats_screen(stats, mouse_pos, current_clicks=0):
             screen.blit(count_text, (x + (cell_w - count_text.get_width()) // 2, y + (cell_h - count_text.get_height()) // 2))
 
     sprite_label = font.render("Win Sprite Distribution", True, (200, 200, 220))
-    screen.blit(sprite_label, (SCREEN_WIDTH // 2 - sprite_label.get_width() // 2, 518))
-    sprite_y = 544
+    sprite_label_x = SCREEN_WIDTH // 2 - sprite_label.get_width() // 2
+    screen.blit(sprite_label, (sprite_label_x, 508 + y_off))
+    pygame.draw.rect(screen, (120, 200, 160), (sprite_label_x - 10, 512 + y_off, 4, 18), border_radius=2)
+    pygame.draw.line(screen, (50, 50, 72), (30, 504 + y_off), (SCREEN_WIDTH - 30, 504 + y_off), 1)
+    sprite_y = 534 + y_off
     bar_x = 70
     bar_w = SCREEN_WIDTH - 140
     bar_h = 22
