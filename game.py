@@ -3,6 +3,11 @@ import random
 import sys
 
 pygame.init()
+pygame.mixer.init()
+pygame.mixer.music.load("assets/audio/music/music.mp3")
+pygame.mixer.music.play(-1)
+click_sounds = [pygame.mixer.Sound(f"assets/audio/sfx/sound{i}.mp3") for i in range(1, 4)]
+win_sound = pygame.mixer.Sound("assets/audio/sfx/win.mp3")
 
 SPRITE_PATH = "assets/graphics/sprites/CatMegaFree/MochiFree/Box3.png"
 NUM_SPRITES = 4
@@ -122,12 +127,14 @@ while running:
                     cell.target_sprite = cell.current_sprite
                 won = False
                 click_count = 0
+                pygame.mixer.music.unpause()
             else:
                 mx, my = event.pos
                 for cell in cells:
                     if cell.rect.collidepoint(mx, my) and not cell.spinning:
                         cell.start_spin()
                         click_count += 1
+                        random.choice(click_sounds).play()
                         break
 
     for cell in cells:
@@ -135,6 +142,8 @@ while running:
 
     if not won and all_stopped() and all_same():
         won = True
+        win_sound.play()
+        pygame.mixer.music.pause()
 
     screen.fill(BG_COLOR)
 
