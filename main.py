@@ -17,17 +17,23 @@ FPS = 60
 async def main():
     pygame.init()
     pygame.mixer.init()
+    audio_ok = False
 
-    if sys.platform == "emscripten":
-        pygame.mixer.music.load("assets/audio/music/music.ogg")
-        click_sounds = [pygame.mixer.Sound(f"assets/audio/sfx/sound{i}.ogg") for i in range(1, 4)]
-        win_sound = pygame.mixer.Sound("assets/audio/sfx/win.ogg")
-    else:
-        pygame.mixer.music.load("assets/audio/music/music.mp3")
-        click_sounds = [pygame.mixer.Sound(f"assets/audio/sfx/sound{i}.mp3") for i in range(1, 4)]
-        win_sound = pygame.mixer.Sound("assets/audio/sfx/win.mp3")
-
-    pygame.mixer.music.play(-1)
+    try:
+        if sys.platform == "emscripten":
+            pygame.mixer.music.load("assets/audio/music/music.ogg")
+            click_sounds = [pygame.mixer.Sound(f"assets/audio/sfx/sound{i}.ogg") for i in range(1, 4)]
+            win_sound = pygame.mixer.Sound("assets/audio/sfx/win.ogg")
+        else:
+            pygame.mixer.music.load("assets/audio/music/music.mp3")
+            click_sounds = [pygame.mixer.Sound(f"assets/audio/sfx/sound{i}.mp3") for i in range(1, 4)]
+            win_sound = pygame.mixer.Sound("assets/audio/sfx/win.mp3")
+        pygame.mixer.music.play(-1)
+        audio_ok = True
+    except Exception:
+        click_sounds = []
+        win_sound = None
+        audio_ok = False
 
     screen = pygame.display.get_surface()
     clock = pygame.time.Clock()
@@ -63,7 +69,8 @@ async def main():
                     click_count = 0
                     current_cell_clicks = [0] * 9
                     game_start_ticks = 0
-                    pygame.mixer.music.unpause()
+                    if audio_ok:
+                        pygame.mixer.music.unpause()
                 elif BTN_RECT.collidepoint(event.pos):
                     game_state = "STATS"
                 else:
@@ -72,7 +79,8 @@ async def main():
                             cell.start_spin()
                             click_count += 1
                             current_cell_clicks[cell.row * COLS + cell.col] += 1
-                            random.choice(click_sounds).play()
+                            if audio_ok:
+                                random.choice(click_sounds).play()
                             if game_start_ticks == 0:
                                 game_start_ticks = pygame.time.get_ticks()
                             break
@@ -82,8 +90,9 @@ async def main():
 
         if game_state == "PLAYING" and not won and all_stopped(cells) and all_same(cells):
             won = True
-            win_sound.play()
-            pygame.mixer.music.pause()
+            if audio_ok:
+                win_sound.play()
+                pygame.mixer.music.pause()
             stats.record_game(
                 click_count,
                 (pygame.time.get_ticks() - game_start_ticks) / 1000.0,
