@@ -28,8 +28,8 @@ WIN_COLOR = (255, 215, 0)
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Michi Slot!")
 clock = pygame.time.Clock()
-font = pygame.font.SysFont("arial", 28, bold=True)
-big_font = pygame.font.SysFont("arial", 48, bold=True)
+font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 28)
+big_font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 48)
 
 sheet = pygame.image.load(SPRITE_PATH).convert_alpha()
 sprites = []
