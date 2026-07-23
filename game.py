@@ -259,12 +259,12 @@ def draw_stats_screen(stats, mouse_pos, current_clicks=0):
         text = small_font.render(f"{label}: {val}", True, (180, 180, 200))
         screen.blit(text, (col2_x, stat_y + i * line_h))
 
-    hist_label = font.render("Clicks per Game", True, (200, 200, 220))
+    hist_label = font.render("Recent 10: Clicks per Game", True, (200, 200, 220))
     screen.blit(hist_label, (SCREEN_WIDTH // 2 - hist_label.get_width() // 2, 180))
     hist_y = 220
     hist_h = 130
 
-    history = stats.clicks_history[-15:]
+    history = stats.clicks_history[-10:]
     if history:
         max_clicks_hist = max(history)
         total_w = SCREEN_WIDTH - 60
@@ -284,21 +284,20 @@ def draw_stats_screen(stats, mouse_pos, current_clicks=0):
                 screen.blit(val_text, (x + (bar_w - val_text.get_width()) // 2, y - 15))
 
         if len(history) > 1:
-            leg_box_x = SCREEN_WIDTH - 30
-            leg_box_w = 80
-            leg_box_h = 44
+            leg_box_w = 58
+            leg_box_h = 34
             leg_box_y = hist_y + hist_h // 2 - leg_box_h // 2
+            leg_box_x = SCREEN_WIDTH - 8
             pygame.draw.rect(screen, (45, 45, 65), (leg_box_x - leg_box_w, leg_box_y, leg_box_w, leg_box_h), border_radius=4)
-            swatch_size = 10
-            swatch_gap = 4
-            label_x = leg_box_x - leg_box_w + 8
+            swatch_size = 8
+            label_x = leg_box_x - leg_box_w + 6
             swatch_x = label_x
-            text_x = label_x + swatch_size + swatch_gap
-            row_y = leg_box_y + 6
+            text_x = label_x + swatch_size + 4
+            row_y = leg_box_y + 4
             pygame.draw.rect(screen, (100, 180, 255), (swatch_x, row_y + 2, swatch_size, swatch_size), border_radius=2)
             older_lbl = tiny_font.render("older", True, (130, 130, 150))
             screen.blit(older_lbl, (text_x, row_y))
-            row_y += 20
+            row_y += 15
             pygame.draw.rect(screen, (255, 200, 100), (swatch_x, row_y + 2, swatch_size, swatch_size), border_radius=2)
             latest_lbl = tiny_font.render("latest", True, (130, 130, 150))
             screen.blit(latest_lbl, (text_x, row_y))
