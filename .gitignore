@@ -1,2 +1,9 @@
 .DS_Store
-game_final.py
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+build/
+dist/
+*.egg-info/
+assets/stats.json

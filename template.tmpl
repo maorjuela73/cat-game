@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#28283C">
+    <meta name="description" content="Michi Slot! - A cat slot machine game">
+    <title>Michi Slot!</title>
+    <link rel="icon" type="image/png" sizes="192x192" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="manifest" href="static/manifest.webmanifest">
+    <style>
+        * { margin: 0; padding: 0; }
+        body { background: #28283C; overflow: hidden; }
+        canvas { display: block; margin: 0 auto; touch-action: none; }
+    </style>
+</head>
+<body>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('static/sw.js');
+        }
+    </script>
+    <script src="{{cookiecutter.cdn}}{{cookiecutter.PYBUILD}}/pygame{{cookiecutter.archive}}.js"></script>
+    <script>
+        var Module = {
+            canvas: (function() {
+                var canvas = document.createElement('canvas');
+                document.body.appendChild(canvas);
+                return canvas;
+            })()
+        };
+        Module.setStatus = function(text) {
+            if (!Module._statusDisplay) {
+                Module._statusDisplay = document.createElement('div');
+                Module._statusDisplay.style.cssText = 'color:white;text-align:center;padding:20px;font-family:sans-serif;';
+                document.body.appendChild(Module._statusDisplay);
+            }
+            Module._statusDisplay.textContent = text;
+        };
+        Module.setStatus('Loading...');
+        window.onerror = function() {
+            Module.setStatus('Exception thrown, see JavaScript console');
+        };
+    </script>
+</body>
+</html>

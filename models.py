@@ -1,10 +1,12 @@
 import random
 import json
 import os
+import sys
 
 COLS, ROWS = 3, 3
 NUM_SPRITES = 4
 STATS_FILE = "assets/stats.json"
+IS_WEB = sys.platform == "emscripten"
 
 
 class Cell:
@@ -95,11 +97,18 @@ class StatsManager:
         self.save()
 
     def load(self):
-        if not os.path.exists(STATS_FILE):
-            return
         try:
-            with open(STATS_FILE) as f:
-                d = json.load(f)
+            if IS_WEB:
+                import platform
+                raw = platform.window.localStorage.getItem("michislot_stats")
+                if raw is None:
+                    return
+                d = json.loads(raw)
+            else:
+                if not os.path.exists(STATS_FILE):
+                    return
+                with open(STATS_FILE) as f:
+                    d = json.load(f)
             self.games_played = d.get('games_played', 0)
             self.total_clicks = d.get('total_clicks', 0)
             self.clicks_history = d.get('clicks_history', [])
@@ -109,7 +118,7 @@ class StatsManager:
             self.current_streak = d.get('current_streak', 0)
             self.best_streak = d.get('best_streak', 0)
             self.total_play_time = d.get('total_play_time', 0.0)
-        except (json.JSONDecodeError, IOError):
+        except Exception:
             pass
 
     def save(self):
@@ -124,9 +133,13 @@ class StatsManager:
             'best_streak': self.best_streak,
             'total_play_time': self.total_play_time,
         }
-        os.makedirs(os.path.dirname(STATS_FILE), exist_ok=True)
-        with open(STATS_FILE, 'w') as f:
-            json.dump(d, f, indent=2)
+        if IS_WEB:
+            import platform
+            platform.window.localStorage.setItem("michislot_stats", json.dumps(d))
+        else:
+            os.makedirs(os.path.dirname(STATS_FILE), exist_ok=True)
+            with open(STATS_FILE, 'w') as f:
+                json.dump(d, f, indent=2)
 
 
 def all_same(cells):
