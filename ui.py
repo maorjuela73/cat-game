@@ -51,21 +51,32 @@ pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Michi Slot!")
 
 
-font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 28)
-title_font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 36)
-big_font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 48)
-small_font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 20)
-tiny_font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 14)
+def init():
+    global font, title_font, big_font, small_font, tiny_font
+    global sprites, tiny_sprites
+    font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 28)
+    title_font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 36)
+    big_font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 48)
+    small_font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 20)
+    tiny_font = pygame.font.Font("assets/fonts/PixelPurl.ttf", 14)
+
+    sheet = pygame.image.load(SPRITE_PATH).convert_alpha()
+    sprites = []
+    tiny_sprites = []
+    for i in range(NUM_SPRITES):
+        frame = pygame.Surface((SPRITE_SIZE, SPRITE_SIZE), pygame.SRCALPHA)
+        frame.blit(sheet, (0, 0), (i * SPRITE_SIZE, 0, SPRITE_SIZE, SPRITE_SIZE))
+        sprites.append(pygame.transform.scale(frame, (CELL_SIZE, CELL_SIZE)))
+        tiny_sprites.append(pygame.transform.scale(frame, (24, 24)))
 
 
-sheet = pygame.image.load(SPRITE_PATH).convert_alpha()
-sprites = []
-tiny_sprites = []
-for i in range(NUM_SPRITES):
-    frame = pygame.Surface((SPRITE_SIZE, SPRITE_SIZE), pygame.SRCALPHA)
-    frame.blit(sheet, (0, 0), (i * SPRITE_SIZE, 0, SPRITE_SIZE, SPRITE_SIZE))
-    sprites.append(pygame.transform.scale(frame, (CELL_SIZE, CELL_SIZE)))
-    tiny_sprites.append(pygame.transform.scale(frame, (24, 24)))
+font = None
+title_font = None
+big_font = None
+small_font = None
+tiny_font = None
+sprites = None
+tiny_sprites = None
 
 
 def draw_button(surface, rect, label, mouse_pos):
