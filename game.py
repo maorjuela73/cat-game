@@ -247,11 +247,12 @@ def draw_stats_screen(stats, mouse_pos, current_clicks=0):
 
     col1_x = 30
     col2_x = SCREEN_WIDTH // 2 + 15
-    stat_y = 50
-    line_h = 22
+    stat_y = 52
+    line_h = 20
 
     for i, (label, val) in enumerate(left_stats):
-        text = small_font.render(f"{label}: {val}", True, (180, 180, 200))
+        color = (255, 215, 0) if label == "Current Clicks" else (180, 180, 200)
+        text = small_font.render(f"{label}: {val}", True, color)
         screen.blit(text, (col1_x, stat_y + i * line_h))
 
     for i, (label, val) in enumerate(right_stats):
@@ -259,9 +260,9 @@ def draw_stats_screen(stats, mouse_pos, current_clicks=0):
         screen.blit(text, (col2_x, stat_y + i * line_h))
 
     hist_label = font.render("Clicks per Game", True, (200, 200, 220))
-    screen.blit(hist_label, (SCREEN_WIDTH // 2 - hist_label.get_width() // 2, 195))
-    hist_y = 225
-    hist_h = 80
+    screen.blit(hist_label, (SCREEN_WIDTH // 2 - hist_label.get_width() // 2, 180))
+    hist_y = 220
+    hist_h = 130
 
     history = stats.clicks_history[-15:]
     if history:
@@ -283,18 +284,32 @@ def draw_stats_screen(stats, mouse_pos, current_clicks=0):
                 screen.blit(val_text, (x + (bar_w - val_text.get_width()) // 2, y - 15))
 
         if len(history) > 1:
-            x_label = tiny_font.render("← older", True, (100, 100, 130))
-            screen.blit(x_label, (start_x, hist_y + hist_h + 4))
-            newer_label = tiny_font.render("newer →", True, (100, 100, 130))
-            screen.blit(newer_label, (start_x + total_bar_w - newer_label.get_width(), hist_y + hist_h + 4))
+            leg_box_x = SCREEN_WIDTH - 30
+            leg_box_w = 80
+            leg_box_h = 44
+            leg_box_y = hist_y + hist_h // 2 - leg_box_h // 2
+            pygame.draw.rect(screen, (45, 45, 65), (leg_box_x - leg_box_w, leg_box_y, leg_box_w, leg_box_h), border_radius=4)
+            swatch_size = 10
+            swatch_gap = 4
+            label_x = leg_box_x - leg_box_w + 8
+            swatch_x = label_x
+            text_x = label_x + swatch_size + swatch_gap
+            row_y = leg_box_y + 6
+            pygame.draw.rect(screen, (100, 180, 255), (swatch_x, row_y + 2, swatch_size, swatch_size), border_radius=2)
+            older_lbl = tiny_font.render("older", True, (130, 130, 150))
+            screen.blit(older_lbl, (text_x, row_y))
+            row_y += 20
+            pygame.draw.rect(screen, (255, 200, 100), (swatch_x, row_y + 2, swatch_size, swatch_size), border_radius=2)
+            latest_lbl = tiny_font.render("latest", True, (130, 130, 150))
+            screen.blit(latest_lbl, (text_x, row_y))
     else:
         no_data = small_font.render("No games played yet", True, (100, 100, 130))
         screen.blit(no_data, (SCREEN_WIDTH // 2 - no_data.get_width() // 2, hist_y + 30))
 
     heat_label = font.render("Favorite Cell", True, (200, 200, 220))
-    screen.blit(heat_label, (SCREEN_WIDTH // 2 - heat_label.get_width() // 2, 330))
-    heat_y = 358
-    cell_w, cell_h = 36, 32
+    screen.blit(heat_label, (SCREEN_WIDTH // 2 - heat_label.get_width() // 2, 364))
+    heat_y = 388
+    cell_w, cell_h = 40, 36
     cell_gap = 5
     heat_total_w = 3 * cell_w + 2 * cell_gap
     heat_start_x = (SCREEN_WIDTH - heat_total_w) // 2
@@ -317,8 +332,8 @@ def draw_stats_screen(stats, mouse_pos, current_clicks=0):
             screen.blit(count_text, (x + (cell_w - count_text.get_width()) // 2, y + (cell_h - count_text.get_height()) // 2))
 
     sprite_label = font.render("Win Sprite Distribution", True, (200, 200, 220))
-    screen.blit(sprite_label, (SCREEN_WIDTH // 2 - sprite_label.get_width() // 2, 470))
-    sprite_y = 498
+    screen.blit(sprite_label, (SCREEN_WIDTH // 2 - sprite_label.get_width() // 2, 518))
+    sprite_y = 544
     bar_x = 70
     bar_w = SCREEN_WIDTH - 140
     bar_h = 22
